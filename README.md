@@ -23,7 +23,7 @@
 
 ## Case Study: IAM Frontier Data
 
-- To produce the case study results and figures, VITO IAM Frontier data is needed. The data is not provided in this repository because of confidentiality reason, please ask the authors for further information.
+- To produce the case study results and figures, VITO IAM Frontier data is needed. The data is not provided in this repository because of confidentiality reason, please contact the authors for further information.
 - Run `IAM.IRI.plots.R` to produce the IRI plots in Figure 2 and 4. `IAM.IRI.plots.R` and `JQM_Function.R` must be in a same local directory. 
 - Run `IAM.allpar.estimates.R` to produce Table 1 and Table S4. `IAM.allpar.estimates.R` and `JQM_Function.R` must be in a same local directory.
 - Run `IAM.circos.plot.R` to produce the circos plot in Figure 3.
