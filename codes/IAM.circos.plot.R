@@ -1,10 +1,12 @@
+#produce the circos plot
+#Figure 3
+
 library(circlize)
 library(tidyr)
 library(caret)
 library(ComplexHeatmap)
 library(gridBase)
 # Load the dataset
-setwd("")
 data <- read.csv("./data/long_combined_data.csv", sep=";", header = T)
 # Set 'label' and 'type' columns as characters to change the values. They are formatted as factors so it is not possible to change them with their defined levels.
 data$label = as.character(data$label)

@@ -1,4 +1,5 @@
 #estimate separate-IRI and joint-IRI from VITO IAM Frontier data
+#Table 1 and Table S4
 source("JQM_Function.R")
 
 combined_data <- read.csv("./data/long_combined_data.csv", sep=";", header = T)

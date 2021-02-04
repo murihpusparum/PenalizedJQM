@@ -21,7 +21,6 @@ rgb(red=52, green=163, blue=220, maxColorValue = 255)
 "#34A3DC"
 
 #data preparation
-setwd("")
 combined_data <- read.csv("./data/long_combined_data.csv", sep=";", header = T)
 combined_data$person_id <- as.character(combined_data$person_id)
 combined_data$subject <- lapply(combined_data$person_id, parse_number)

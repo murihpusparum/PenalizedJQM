@@ -1,12 +1,11 @@
-#produce Figure 1, of simulation results
+#produce Figure 1, Table S2-S3, of simulation results
 
 library(ggplot2)
 ###################
-#read Penalized JQM simulation results stored in one folder
+#read Penalized JQM simulation results stored in "./output/PJQM" directory
 ###################
 #load data resulted from JQM_Sims.R
-setwd("")
-my_files <- list.files("")
+my_files <- list.files("./output/PJQM", pattern = "\\.Rdata$", full.names=TRUE)
 NRow <- length(my_files)
 
 all_res <- lapply(my_files, function(x) mget(load(x)))
@@ -42,12 +41,11 @@ mean.jqm <- mean.res[,c(1:8)]
 mean.jqm$method <- "Penalized JQM"
 
 ##################
-#read LQMM simulation results stored in another folder
+#read LQMM simulation results stored in "./output/LQMM" directory
 ##################
 #load data resulted from LQMM_Sims.R
-setwd("")
-mean.N <- load("/mean.N.Rdata")
-mean.chi <- load("/mean.chi.Rdata")
+load("./output/LQMM/mean.N.Rdata")
+load("./output/LQMM/mean.chi.Rdata")
 
 mean.lqmm.N <- mean.N[, c(1:5, 8:10)]
 mean.lqmm.chi <- mean.chi[, c(1:5, 8:10)]

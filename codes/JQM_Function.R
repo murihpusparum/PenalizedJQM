@@ -358,12 +358,17 @@ SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim) {
     
     Results[si,11:13]<-c(coverage2,coverage,mean(c(coverage,coverage2)))
     
-    #save results for every 10 iterations
-    if((si%%10) ==0) {
-     save(Results, file=paste("JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
-                               beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
-                               ".RData",sep = ""))
-   }
+    #save final results
+    save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+                             beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
+                             ".Rdata",sep = ""))
+    
+    #or save results for every 10 iterations
+    #if((si%%10) ==0) {
+    # save(Results, file=paste("./output/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+    #                           beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
+    #                           ".Rdata",sep = ""))
+    #}
    gc(verbose = FALSE)
   }
 }

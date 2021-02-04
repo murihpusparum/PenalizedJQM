@@ -8,8 +8,6 @@ install_github("jokergoo/ComplexHeatmap")
 library(ComplexHeatmap)
 library(circlize)
 
-
-setwd("")
 combined_data <- read.csv("./data/long_combined_data.csv", sep=";", header = T)
 
 ################################

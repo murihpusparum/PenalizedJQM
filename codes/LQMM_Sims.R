@@ -1,3 +1,5 @@
+source("LQMM_Function.R")
+
 #call input scenarios
 #set the working directory
 p <- read.csv("./data/input_LQMM_N.csv", header = T, sep = ";")
@@ -23,5 +25,5 @@ for (r in 1:24) {
   mean.chi[r,1:10] <- est2
 }
 
-save(mean.N, file = "mean.N.Rdata")
-save(mean.chi, file = "mean.chi.Rdata")
+save(mean.N, file = "./output/LQMM/mean.N.Rdata")
+save(mean.chi, file = "./output/LQMM/mean.chi.Rdata")
