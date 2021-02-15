@@ -43,6 +43,9 @@ check<-function(u,tau) {
 }
 
 jqm.update<-function(db,N,beta0,beta1,beta2,u,z,lambda.u,lambda.z,alpha) {
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
   subjects<-unique(db$subject)
   # estimation of z
   n<-length(z)
@@ -54,17 +57,17 @@ jqm.update<-function(db,N,beta0,beta1,beta2,u,z,lambda.u,lambda.z,alpha) {
     #z.seq<-seq(z.approx*ifelse(z.approx<1,0.5,2),1, length.out=20)
     z.seq<-seq(0.1,10,length.out = 20)
     obj<-sapply(z.seq,function(x) {
-      sum(check(y-x*beta1,tau=0.025)+check(y-x*beta2,tau=0.975))+lambda.z*(x-1)^2
+      sum(check(y-x*beta1,tau=tau1)+check(y-x*beta2,tau=tau2))+lambda.z*(x-1)^2
     })
     z.i<-z.seq[which.min(obj)[1]]
     z.seq<-seq(z.i-(z.seq[2]-z.seq[1]),z.i+(z.seq[2]-z.seq[1]),length.out = 20)
     obj<-sapply(z.seq,function(x) {
-      sum(check(y-x*beta1,tau=0.025)+check(y-x*beta2,tau=0.975))+lambda.z*(x-1)^2
+      sum(check(y-x*beta1,tau=tau1)+check(y-x*beta2,tau=tau2))+lambda.z*(x-1)^2
     })
     z.i<-z.seq[which.min(obj)[1]]
     z.seq<-runif(20,min=z.i-(z.seq[2]-z.seq[1]),max=z.i+(z.seq[2]-z.seq[1]))
     obj<-sapply(z.seq,function(x) {
-      sum(check(y-x*beta1,tau=0.025)+check(y-x*beta2,tau=0.975))+lambda.z*(x-1)^2
+      sum(check(y-x*beta1,tau=tau1)+check(y-x*beta2,tau=tau2))+lambda.z*(x-1)^2
     })
     z[i]<-z.seq[which.min(obj)[1]]
     db$z[db$subject==subjects[i]]<-z[i]
@@ -95,12 +98,12 @@ jqm.update<-function(db,N,beta0,beta1,beta2,u,z,lambda.u,lambda.z,alpha) {
     
     u.seq<-seq(1.5*median(y),sign(-u[i])*sd(y),length.out = 100)
     obj<-sapply(u.seq,function(x) {
-      sum(check(y-z.i*beta1-x,tau=0.025)+check(y-z.i*beta2-x,tau=0.975))+lambda.u*x^2
+      sum(check(y-z.i*beta1-x,tau=tau1)+check(y-z.i*beta2-x,tau=tau2))+lambda.u*x^2
     })
     u.i<-u.seq[which.min(obj)[1]]
     u.seq<-runif(20,min=u.i-abs(u.seq[2]-u.seq[1]),max=u.i+abs(u.seq[2]-u.seq[1]))
     obj<-sapply(u.seq,function(x) {
-      sum(check(y-z.i*beta1-x,tau=0.025)+check(y-z.i*beta2-x,tau=0.975))+lambda.u*x^2
+      sum(check(y-z.i*beta1-x,tau=tau1)+check(y-z.i*beta2-x,tau=tau2))+lambda.u*x^2
     })
     u[i]<-u.seq[which.min(obj)[1]]
   }
@@ -112,6 +115,9 @@ jqm.update<-function(db,N,beta0,beta1,beta2,u,z,lambda.u,lambda.z,alpha) {
 }
 
 jqm.est.fixed<-function(db,lambda.u,lambda.z,alpha) {
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
   subjects<-unique(db$subject)
   N<-length(subjects)
   beta0<-median(db$y)
@@ -170,50 +176,53 @@ jqm.est.fixed<-function(db,lambda.u,lambda.z,alpha) {
               cnt=cnt))
 }
 
-jqm.coverage.new.subject<-function(res,y,l.u,l.z) {
+jqm.coverage.new.subject<-function(res,y,l.u,l.z,alpha) {
   l.u<-res$lambda.u
   l.z<-res$lambda.z
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
   
   y.i<-y-res$beta0
   w<-seq(min(y.i),max(y.i), length.out = 100)
   obj<-sapply(w,function(x) {
-    sum(check(y.i-res$beta1-x,tau=0.025)+check(y.i-res$beta2-x,tau=0.975))+l.u*x^2
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
   })
   u.i<-w[which.min(obj)[1]]
   w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
   obj<-sapply(w,function(x) {
-    sum(check(y.i-res$beta1-x,tau=0.025)+check(y.i-res$beta2-x,tau=0.975))+l.u*x^2
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
   })
   u.i<-w[which.min(obj)[1]]
   
   y.i<-y.i-u.i
   z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
   obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=0.025)+check(y.i-x*res$beta2,tau=0.975))+l.z*(x-1)^2
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
   })
   z.i<-z.seq[which.min(obj)[1]]
   
   y.i<-y-res$beta0
   w<-seq(min(y.i),max(y.i), length.out = 100)
   obj<-sapply(w,function(x) {
-    sum(check(y.i-z.i*res$beta1-x,tau=0.025)+check(y.i-z.i*res$beta2-x,tau=0.975))+l.u*x^2
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
   })
   u.i<-w[which.min(obj)[1]]
   w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
   obj<-sapply(w,function(x) {
-    sum(check(y.i-z.i*res$beta1-x,tau=0.025)+check(y.i-z.i*res$beta2-x,tau=0.975))+l.u*x^2
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
   })
   u.i<-w[which.min(obj)[1]]
   
   y.i<-y.i-u.i
   z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
   obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=0.025)+check(y.i-x*res$beta2,tau=0.975))+l.z*(x-1)^2
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
   })
   z.i<-z.seq[which.min(obj)[1]]
   z.seq<-runif(20,min=z.i-(z.seq[2]-z.seq[1]), max=z.i+(z.seq[2]-z.seq[1]))
   obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=0.025)+check(y.i-x*res$beta2,tau=0.975))+l.z*(x-1)^2
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
   })
   z.i<-z.seq[which.min(obj)[1]]
   
@@ -265,7 +274,7 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
           }
           coverage<-mean(coverage)
           
-          coverage2<-jqm.coverage.new.subject(res=res,y=db$y[db$subject==i])
+          coverage2<-jqm.coverage.new.subject(res=res,y=db$y[db$subject==i],alpha=alpha)
           
           coverage.tot<-coverage.tot+c(coverage,coverage2)
           coverage.tot.both<-sum(coverage.tot)/(2*N)
@@ -322,13 +331,13 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
 }
 
 #function for running the simulation
-SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim) {
-  Results<-matrix(nrow=NSim,ncol=13)
+SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim, seed) {
+  Results<-matrix(nrow=NSim,ncol=14)
   Results<-as.data.frame(Results)
   names(Results)<-c("iter","alpha","beta0","beta1","beta2",
                     "lambda.u","lambda.z",
                     "Cov.subj","Cov.time","Cov",
-                    "EmpCov.subj","EmpCov.time","EmpCov")
+                    "EmpCov.subj","EmpCov.time","EmpCov", "seed")
 
   for(si in 1:NSim) {
     df<-SimData(N=N+1,n=n+1,beta=beta,a=a,b=b,psiu2=psiu2,
@@ -354,21 +363,21 @@ SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim) {
     coverage<-mean(coverage)
     
     y.i<-df$y[df$subject==N+1]
-    coverage2<-jqm.coverage.new.subject(res=res,y=y.i)
+    coverage2<-jqm.coverage.new.subject(res=res,y=y.i,alpha=alpha)
     
     Results[si,11:13]<-c(coverage2,coverage,mean(c(coverage,coverage2)))
-    
-    #save final results
-    save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
-                             beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
-                             ".Rdata",sep = ""))
-    
+    Results[si,14]<-seed
+      
     #or save results for every 10 iterations
     #if((si%%10) ==0) {
-    # save(Results, file=paste("./output/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+    # save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
     #                           beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
     #                           ".Rdata",sep = ""))
     #}
    gc(verbose = FALSE)
   }
+  #save final results
+  save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+                           beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
+                           ".Rdata",sep = ""))
 }

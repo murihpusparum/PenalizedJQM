@@ -16,7 +16,8 @@ mean.cov <- mean.cov[,-1]
 for (i in 1:NRow) {
   mean.cov[i,1] <- all_res[[i]]$Results$alpha[1]
   mean.cov[i,2:12] <- colMeans(all_res[[i]]$Results[,3:13])
-  mean.cov[i,13] <- median(all_res[[i]]$Results[,13])
+  mean.cov[i,13] <- all_res[[i]]$Results$seed[1]
+  mean.cov[i,14] <- median(all_res[[i]]$Results[,13])
 }
 #get the info about N, n, a, and b
 resnames <- strsplit(my_files, split = "_")
@@ -25,13 +26,13 @@ mean.cov$n <- NA
 mean.cov$a <- NA
 mean.cov$b <- NA
 for (i in 1:NRow) {
-  mean.cov[i,14] <- resnames[[i]][6] #N
-  mean.cov[i,15] <- resnames[[i]][8] #n
-  mean.cov[i,16] <- resnames[[i]][12] #a
-  mean.cov[i,17] <- resnames[[i]][14] #b
+  mean.cov[i,15] <- resnames[[i]][6] #N
+  mean.cov[i,16] <- resnames[[i]][8] #n
+  mean.cov[i,17] <- resnames[[i]][12] #a
+  mean.cov[i,18] <- resnames[[i]][14] #b
 }
 #only take necessary info
-mean.res <- mean.cov[,c(14,15,1,16,17,10:13,5,6)]
+mean.res <- mean.cov[,c(15,16,1,17,18,10:12,14,5,6,13)]
 mean.res$N <- as.numeric(mean.res$N)
 mean.res$n <- as.numeric(mean.res$n)
 mean.res$a <- as.numeric(mean.res$a)
