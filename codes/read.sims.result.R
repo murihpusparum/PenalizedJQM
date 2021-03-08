@@ -5,7 +5,9 @@ library(ggplot2)
 #read Penalized JQM simulation results stored in "./output/PJQM" directory
 ###################
 #load data resulted from JQM_Sims.R
-my_files <- list.files("./output/PJQM", pattern = "\\.Rdata$", full.names=TRUE)
+my_#files <- list.files("./output/PJQM", pattern = "\\.Rdata$", full.names=TRUE)
+my_files <- list.files("D:/BIOSTAT - UHASSELT/Doctoral Degree/1st Year/Codes/Joint_Quantile_Penalized/PJQM/Results26022021",
+                       pattern = "\\.Rdata$", full.names=TRUE)
 NRow <- length(my_files)
 
 all_res <- lapply(my_files, function(x) mget(load(x)))
