@@ -17,7 +17,7 @@ sim_N <- function(N, n, alpha, beta, psiu, a, b, seed){
   y <- beta + rep(u,rep(n,N)) + epsilon
   df$y<-y
   
-  return(list(d=df, beta1=beta1, beta2=beta2))
+  return(list(d=df))
 }
 
 #data generation for e_ij follow N and u_i follow Chisq
@@ -38,7 +38,7 @@ sim_N_chi <- function(N, n, alpha, beta, psiu, a, b, seed){
   y <- beta + rep(u_i,rep(n,N)) + epsilon
   df$y<-y
   
-  return(list(d=df, beta1=beta1, beta2=beta2))
+  return(list(d=df))
 }
 
 lqmm_call <- function(N, n, alpha, beta, NSim, psiu, a, b, seed, FUN, dist){
@@ -154,14 +154,15 @@ lqmm_call <- function(N, n, alpha, beta, NSim, psiu, a, b, seed, FUN, dist){
     
     Results[i,1:10] <- c(N, n, alpha, a, b, est[i,1], est[i,2], 
                      coverage2, coverage, mean(c(coverage,coverage2)))
-    mean.Results <- colMeans(Results)
   }
+  mean.Results <- colMeans(Results)
+  mean.Results[11] <- median(Results[,10])
   
-  save(Results, file=paste("GB_lqmm_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+  save(Results, file=paste("GB_lqmm_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_",
                            beta, ".RData",sep = ""))
-  save(u1, file=paste("GB_lqmm_u1_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+  save(u1, file=paste("GB_lqmm_u1_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_",
                        beta, ".RData",sep = ""))
-  save(u2, file=paste("GB_lqmm_u2_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+  save(u2, file=paste("GB_lqmm_u2_",dist, "_", i, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_",
                        beta, ".RData",sep = ""))
   return(mean.Results)
 }
