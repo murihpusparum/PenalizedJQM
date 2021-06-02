@@ -5,6 +5,7 @@
   1. Install and load from R Gui: `install.packages("installr")` and `library(installr)`.
   2. Call `update(R)`.
   3. From within RStudio, run `R.version.string` to get detailed information about the version of R running.
+- To easily run all the R scripts, use `PenalizedJQM.Rproj` in the main directory.
 - Go to `"./codes/install.package.R"` and run the codes for installing all necessary packages.
 
 
