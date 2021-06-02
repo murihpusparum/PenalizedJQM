@@ -11,12 +11,10 @@
 
 ## Simulation study
 
-- To run the LQMM simulation, `LQMM_Function.R` and `LQMM_Sims.R` must be in a same local directory.
-- The input files can be found in `"./data"` directory.
+- The input files for the LQMM simulation can be found in `"./data"` directory.
 - Run `LQMM_Sims.R` for the LQMM simulation, the output of the results will be stored in `"./output/LQMM"` directory.
-- To run the Penalized JQM simulation, `JQM_Function.R` and `JQM_Sims.R` must be in a same local directory.
-- Run `JQM_Sims.R` by changing the seed, sample size *N* and *n*, and parameter scenarios *beta, a, b, psiu2* and *alpha*. The list of sample size and parameter scenarios with their corresponding seeds can be found in `"./data/PJQM_scenarios.csv"`. The number of simulation runs is indicated by variable *NSim*.
-- The output of the results will be stored in `"./output/PJQM"` directory.
+- Run `JQM_Sims.R` for the PJQM simulation by changing the seed, sample size *N* and *n*, and parameter scenarios *beta, a, b, psiu2* and *alpha*. The list of sample size and parameter scenarios with their corresponding seeds can be found in `"./data/PJQM_scenarios.csv"`. The number of simulation runs is indicated by variable *NSim*.
+- There are three subdirectories inside the `"./output/PJQM"`, the output of PJQM simulations will be stored in each directory depending on which distribution scenarios were applied.
 
 ## Read simulation results
 
