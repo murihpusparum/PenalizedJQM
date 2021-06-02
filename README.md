@@ -20,7 +20,7 @@
 
 ## Read simulation results
 
-- To read the simulation results and produce the simulation figures and tables, run `read.sims.result.R` and `sim.plots.R'.
+- To read the simulation results and produce the simulation figures and tables, run `read.sims.result.R` and `sim.plots.R`.
 
 ## Case Study: IAM Frontier Data
 
