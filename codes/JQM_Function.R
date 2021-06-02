@@ -1,8 +1,8 @@
 library(quantreg)
 library(invgamma)
 
-#function for data generation
-SimData<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
+#function for data generation - error~N(0, theta_i), u~chisq(4)
+SimData_chi<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
   # N number of subjects
   # n numbr of observations in each subject, for rand. effects ui
   # psiu2 true variance of u
@@ -17,7 +17,9 @@ SimData<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
   df<-data.frame(subject=rep(1:N,rep(n,N)),
                  time=rep(1:n,N))
   #simulate f(u)
-  u<-rnorm(N,mean=0,sd=sqrt(psiu2))
+  u<-rchisq(N, df=psiu2)
+  #scaled to zero mean and variance=1
+  u <- (u-psiu2)/(sqrt(2*psiu2))
 
   #simulate epsilon with var ~ IG(a,b)
   theta_sq <- rinvgamma(N, shape = a, rate = b)
@@ -34,6 +36,72 @@ SimData<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
   y<- beta.true + rep(u,rep(n,N)) + epsilon
   df$y<-y
 
+  return(df)
+}
+
+#function for data generation - error~t(3), u~N(0,1)
+SimData_eps_t<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
+  # N number of subjects
+  # n numbr of observations in each subject, for rand. effects ui
+  # psiu2 true variance of u
+  # a and b: true parameters of inverse gamma
+  # beta: intercept in LMM
+  # alpha is the confindence level
+  
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
+  beta.true = beta
+  df<-data.frame(subject=rep(1:N,rep(n,N)),
+                 time=rep(1:n,N))
+  #simulate f(u)
+  u<-rnorm(N,mean=0,sd=sqrt(psiu2))
+  
+  #simulate epsilon with single skewed distribution, t(3)
+  epsilon <- rt(N*n, df=3)
+  #scaled to zero mean and variance=1
+  epsilon <- epsilon/(3/(3-2))
+  
+  #simulated data 
+  y<- beta.true + rep(u,rep(n,N)) + epsilon
+  df$y<-y
+  
+  return(df)
+}
+
+#function for data generation - error~N(0, theta_i), u~N(0,1) 
+SimData<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
+  # N number of subjects
+  # n numbr of observations in each subject, for rand. effects ui
+  # psiu2 true variance of u
+  # a and b: true parameters of inverse gamma
+  # beta: intercept in LMM
+  # alpha is the confindence level
+  
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
+  beta.true = beta
+  df<-data.frame(subject=rep(1:N,rep(n,N)),
+                 time=rep(1:n,N))
+  #simulate f(u)
+  u<-rnorm(N,mean=0,sd=sqrt(psiu2))
+  
+  #simulate epsilon with var ~ IG(a,b)
+  theta_sq <- rinvgamma(N, shape = a, rate = b)
+  theta_i <- sqrt(theta_sq)
+  epsilon <- matrix(NA, nrow = n, ncol = N)
+  epsilon <- list()
+  for (i in 1:N) {
+    epsilon_i <- list(rnorm(n, mean = 0, sd = sqrt(theta_sq[i])))
+    epsilon <- append(epsilon, epsilon_i)
+  }
+  epsilon <- unlist(epsilon)
+  
+  #simulated data 
+  y<- beta.true + rep(u,rep(n,N)) + epsilon
+  df$y<-y
+  
   return(df)
 }
 
@@ -176,6 +244,7 @@ jqm.est.fixed<-function(db,lambda.u,lambda.z,alpha) {
               cnt=cnt))
 }
 
+#compute coverage for IRI with both lower and upper bound
 jqm.coverage.new.subject<-function(res,y,l.u,l.z,alpha) {
   l.u<-res$lambda.u
   l.z<-res$lambda.z
@@ -228,6 +297,118 @@ jqm.coverage.new.subject<-function(res,y,l.u,l.z,alpha) {
   
   coverage2<-mean((y.i>z.i*res$beta1)&
                     (y.i<z.i*res$beta2))
+  
+  return(coverage2)
+}
+
+#compute coverage for IRI with only upper bound
+jqm.coverage.new.subject.up<-function(res,y,l.u,l.z,alpha) {
+  l.u<-res$lambda.u
+  l.z<-res$lambda.z
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
+  
+  y.i<-y-res$beta0
+  w<-seq(min(y.i),max(y.i), length.out = 100)
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  
+  y.i<-y.i-u.i
+  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  
+  y.i<-y-res$beta0
+  w<-seq(min(y.i),max(y.i), length.out = 100)
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  
+  y.i<-y.i-u.i
+  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  z.seq<-runif(20,min=z.i-(z.seq[2]-z.seq[1]), max=z.i+(z.seq[2]-z.seq[1]))
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  
+  coverage2<-mean(y.i<z.i*res$beta2)
+  
+  return(coverage2)
+}
+
+#compute coverage for IRI with only lower bound
+jqm.coverage.new.subject.low<-function(res,y,l.u,l.z,alpha) {
+  l.u<-res$lambda.u
+  l.z<-res$lambda.z
+  tau1 = alpha/2
+  tau2 = 1-tau1
+  
+  
+  y.i<-y-res$beta0
+  w<-seq(min(y.i),max(y.i), length.out = 100)
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  
+  y.i<-y.i-u.i
+  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  
+  y.i<-y-res$beta0
+  w<-seq(min(y.i),max(y.i), length.out = 100)
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
+  obj<-sapply(w,function(x) {
+    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
+  })
+  u.i<-w[which.min(obj)[1]]
+  
+  y.i<-y.i-u.i
+  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  z.seq<-runif(20,min=z.i-(z.seq[2]-z.seq[1]), max=z.i+(z.seq[2]-z.seq[1]))
+  obj<-sapply(z.seq,function(x) {
+    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
+  })
+  z.i<-z.seq[which.min(obj)[1]]
+  
+  coverage2<-mean((y.i>z.i*res$beta1))
   
   return(coverage2)
 }
@@ -340,6 +521,7 @@ SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim, seed) {
                     "EmpCov.subj","EmpCov.time","EmpCov", "seed")
 
   for(si in 1:NSim) {
+    #modify SimData function according to the target scenario
     df<-SimData(N=N+1,n=n+1,beta=beta,a=a,b=b,psiu2=psiu2,
               alpha=alpha)
     df.fit<-df[(df$time<=n)&(df$subject<=N),]
@@ -368,16 +550,12 @@ SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim, seed) {
     Results[si,11:13]<-c(coverage2,coverage,mean(c(coverage,coverage2)))
     Results[si,14]<-seed
       
-    #or save results for every 10 iterations
-    #if((si%%10) ==0) {
-    # save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
-    #                           beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
-    #                           ".Rdata",sep = ""))
-    #}
+    #save results for every 10 iterations
+    if((si%%10) ==0) {
+     save(Results, file=paste("./output/PJQM/JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+                               beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
+                               ".Rdata",sep = ""))
+    }
    gc(verbose = FALSE)
   }
-  #save final results
-  save(Results, file=paste("./output/PJQM/", "JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
-                           beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
-                           ".Rdata",sep = ""))
 }
