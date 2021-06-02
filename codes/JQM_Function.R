@@ -552,7 +552,7 @@ SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim, seed) {
       
     #save results for every 10 iterations
     if((si%%10) ==0) {
-     save(Results, file=paste("./output/PJQM/JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
+     save(Results, file=paste("./output/PJQM/Normal PJQM/JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
                                beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
                                ".Rdata",sep = ""))
     }
