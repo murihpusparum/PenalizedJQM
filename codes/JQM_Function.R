@@ -1,109 +1,4 @@
 library(quantreg)
-library(invgamma)
-
-#function for data generation - error~N(0, theta_i), u~chisq(4)
-SimData_chi<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
-  # N number of subjects
-  # n numbr of observations in each subject, for rand. effects ui
-  # psiu2 true variance of u
-  # a and b: true parameters of inverse gamma
-  # beta: intercept in LMM
-  # alpha is the confindence level
-  
-  tau1 = alpha/2
-  tau2 = 1-tau1
-  
-  beta.true = beta
-  df<-data.frame(subject=rep(1:N,rep(n,N)),
-                 time=rep(1:n,N))
-  #simulate f(u)
-  u<-rchisq(N, df=psiu2)
-  #scaled to zero mean and variance=1
-  u <- (u-psiu2)/(sqrt(2*psiu2))
-
-  #simulate epsilon with var ~ IG(a,b)
-  theta_sq <- rinvgamma(N, shape = a, rate = b)
-  theta_i <- sqrt(theta_sq)
-  epsilon <- matrix(NA, nrow = n, ncol = N)
-  epsilon <- list()
-  for (i in 1:N) {
-    epsilon_i <- list(rnorm(n, mean = 0, sd = sqrt(theta_sq[i])))
-    epsilon <- append(epsilon, epsilon_i)
-  }
-  epsilon <- unlist(epsilon)
-  
-  #simulated data 
-  y<- beta.true + rep(u,rep(n,N)) + epsilon
-  df$y<-y
-
-  return(df)
-}
-
-#function for data generation - error~t(3), u~N(0,1)
-SimData_eps_t<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
-  # N number of subjects
-  # n numbr of observations in each subject, for rand. effects ui
-  # psiu2 true variance of u
-  # a and b: true parameters of inverse gamma
-  # beta: intercept in LMM
-  # alpha is the confindence level
-  
-  tau1 = alpha/2
-  tau2 = 1-tau1
-  
-  beta.true = beta
-  df<-data.frame(subject=rep(1:N,rep(n,N)),
-                 time=rep(1:n,N))
-  #simulate f(u)
-  u<-rnorm(N,mean=0,sd=sqrt(psiu2))
-  
-  #simulate epsilon with single skewed distribution, t(3)
-  epsilon <- rt(N*n, df=3)
-  #scaled to zero mean and variance=1
-  epsilon <- epsilon/(3/(3-2))
-  
-  #simulated data 
-  y<- beta.true + rep(u,rep(n,N)) + epsilon
-  df$y<-y
-  
-  return(df)
-}
-
-#function for data generation - error~N(0, theta_i), u~N(0,1) 
-SimData<-function(N, n, psiu2, a, b, beta, alpha=0.05) {
-  # N number of subjects
-  # n numbr of observations in each subject, for rand. effects ui
-  # psiu2 true variance of u
-  # a and b: true parameters of inverse gamma
-  # beta: intercept in LMM
-  # alpha is the confindence level
-  
-  tau1 = alpha/2
-  tau2 = 1-tau1
-  
-  beta.true = beta
-  df<-data.frame(subject=rep(1:N,rep(n,N)),
-                 time=rep(1:n,N))
-  #simulate f(u)
-  u<-rnorm(N,mean=0,sd=sqrt(psiu2))
-  
-  #simulate epsilon with var ~ IG(a,b)
-  theta_sq <- rinvgamma(N, shape = a, rate = b)
-  theta_i <- sqrt(theta_sq)
-  epsilon <- matrix(NA, nrow = n, ncol = N)
-  epsilon <- list()
-  for (i in 1:N) {
-    epsilon_i <- list(rnorm(n, mean = 0, sd = sqrt(theta_sq[i])))
-    epsilon <- append(epsilon, epsilon_i)
-  }
-  epsilon <- unlist(epsilon)
-  
-  #simulated data 
-  y<- beta.true + rep(u,rep(n,N)) + epsilon
-  df$y<-y
-  
-  return(df)
-}
 
 #checker function
 check<-function(u,tau) {
@@ -163,7 +58,6 @@ jqm.update<-function(db,N,beta0,beta1,beta2,u,z,lambda.u,lambda.z,alpha) {
   for(i in 1:N) {
     y<-db$y[db$subject==subjects[i]]-beta0
     z.i<-z[i]
-    
     u.seq<-seq(1.5*median(y),sign(-u[i])*sd(y),length.out = 100)
     obj<-sapply(u.seq,function(x) {
       sum(check(y-z.i*beta1-x,tau=tau1)+check(y-z.i*beta2-x,tau=tau2))+lambda.u*x^2
@@ -244,8 +138,7 @@ jqm.est.fixed<-function(db,lambda.u,lambda.z,alpha) {
               cnt=cnt))
 }
 
-#compute coverage for IRI with both lower and upper bound
-jqm.coverage.new.subject<-function(res,y,l.u,l.z,alpha) {
+jqm.coverage.new.subject<-function(res,y,y.s,alpha) {
   l.u<-res$lambda.u
   l.z<-res$lambda.z
   tau1 = alpha/2
@@ -295,8 +188,8 @@ jqm.coverage.new.subject<-function(res,y,l.u,l.z,alpha) {
   })
   z.i<-z.seq[which.min(obj)[1]]
   
-  coverage2<-mean((y.i>z.i*res$beta1)&
-                    (y.i<z.i*res$beta2))
+  coverage2<-mean((y.s>res$beta0+u.i+z.i*res$beta1)&
+                    (y.s<res$beta0+u.i+z.i*res$beta2))
   
   return(coverage2)
 }
@@ -417,88 +310,116 @@ jqm.coverage.new.subject.low<-function(res,y,l.u,l.z,alpha) {
 #jqm.est.fixed, and jqm.coverage.new.subject functions
 jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
               lambda.z.seq=seq(0.5,5,0.5)) {
-    beta0<-median(db$y)
-    subjects<-unique(db$subject)
-    N<-length(subjects)
-    n<-length(unique(db$time)) # assuming n is constant over all subjects
-    obj.tot<-0 # objective function to be minized
-    obj.check<-0
-    obj.pen<-0
-    
-    u<-numeric(N)
-    z<-rep(1,N)
-    db$z<-1
-    
-    w<-seq(min(db$y),max(db$y), length.out = 2*N)-median(db$y)
-    w2<-seq(0.1,10,length.out = 100)
-    
-    db.del<-db[db$time!=max(db$time),]
-    all.coverages<-c()
-    cv.results<-data.frame(lambda.u=0,lambda.z=0,cov.time=0,cov.subj=0,coverage=0)
-    for(l.z in lambda.z.seq) {
-      above<-0
-      below<-0
-      for(l.u in lambda.u.seq) {
-        coverage.tot<-c(0,0)
-        for(i in 1:N) {
-          db.del<-db[db$subject!=subjects[i],]
-          db.del<-db.del[db.del$time!=max(db.del$time),]
-          res<-jqm.est.fixed(db=db.del,lambda.u=l.u,lambda.z=l.z, alpha=alpha)
-          
-          coverage<-numeric(N-1)
-          cnt<-1
-          for(s in subjects[subjects!=i]) {
-            y<-db$y[(db$subject==s)&(db$time==max(db$time))]
-            coverage[cnt]<-((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
-                              (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))
-            cnt<-cnt+1
-          }
-          coverage<-mean(coverage)
-          
-          coverage2<-jqm.coverage.new.subject(res=res,y=db$y[db$subject==i],alpha=alpha)
-          
-          coverage.tot<-coverage.tot+c(coverage,coverage2)
-          coverage.tot.both<-sum(coverage.tot)/(2*N)
-        }
-        cv.results<-rbind(cv.results,c(l.u,l.z,coverage.tot/N,coverage.tot.both))
-        gc(verbose = FALSE)
-        if(coverage.tot.both>0.95) {
-          above<-above+1
-          if((below>0)|(above==4)) {
-            below<--1
-          }
-        }
-        if(coverage.tot.both<0.95) {
-          below<-below+1
-          if((above>0)|(below==4)) {
-            above<--1
-          }
-        }
-        if(sign(above*below)==-1) {
-          above<-0
-          below<-0
-          break
+  beta0<-median(db$y)
+  subjects<-unique(db$subject)
+  N<-length(subjects)
+  n<-length(unique(db$time)) # assuming n is constant over all subjects
+  obj.tot<-0 # objective function to be minized
+  obj.check<-0
+  obj.pen<-0
+  
+  u<-numeric(N)
+  z<-rep(1,N)
+  db$z<-1
+  
+  # if time points are imbalance, max(time) == max(time) - 1
+  all.coverages<-c()
+  cv.results<-data.frame(lambda.u=0,lambda.z=0,cov.time=0,cov.subj=0,coverage=0)
+  for(l.z in lambda.z.seq) {
+    above<-0
+    below<-0
+    for(l.u in lambda.u.seq) {
+      # if time points are imbalance, exclude the last time point that is present in all subject
+      max.time.del <- ifelse(length(db[db$time==max(db$time),]$subject)==length(unique(db$subject)), 
+                             yes=max(db$time), no=(max(db$time)-1))
+      db.del<-db[db$time!=max.time.del,]
+      res<-jqm.est.fixed(db=db.del,lambda.u=l.u,lambda.z=l.z, alpha=alpha)
+      
+      coverage<-numeric(N)
+      cnt<-1
+      for(s in subjects) {
+        db.y<-db[(db$subject==s),]
+        y<-db.y$y[(db.y$time==max(db.y$time))]
+        
+        coverage[cnt]<-((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
+                          (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))
+        cnt<-cnt+1
+      }
+      coverage<-mean(coverage)
+      
+      #coverage for the new subject, using LOOCV
+      coverage.tot<-c(0,0)
+      coverage2<-numeric(N)
+      cnt<-1
+      for(s in subjects) {
+        db.del2<-db[db$subject!=s,]
+        N.del<-length(unique(db.del2$subject))
+        max.time<-ifelse(length(db.del2[db.del2$time==max(db.del2$time),]$subject)==N.del, 
+                         yes=max(db.del2$time), no=(max(db.del2$time)-1))
+        db.del2<-db.del2[db.del2$time!=max.time,]
+        
+        res2<-jqm.est.fixed(db=db.del2,lambda.u=l.u,lambda.z=l.z, alpha=alpha)
+        # coverage for a new subject minus the last time point
+        db.y<-db[db$subject==s,]
+        y.i<-db.y$y[db.y$time!=max(db.y$time)]
+        y.s<-db.y$y[db.y$time==max(db.y$time)]
+        
+        coverage2[cnt]<-jqm.coverage.new.subject(res=res2,y=y.i,y.s=y.s,alpha=alpha)
+        cnt<-cnt+1
+      }
+      coverage2<-mean(coverage2)
+      coverage.tot<-c(coverage,coverage2)
+      coverage.tot.both<-mean(coverage.tot)
+      
+      cv.results<-rbind(cv.results,c(l.u,l.z,coverage.tot,coverage.tot.both))
+      gc(verbose = FALSE)
+      if(coverage.tot.both>0.95) {
+        above<-above+1
+        if((below>0)|(above==4)) {
+          below<--1
         }
       }
+      if(coverage.tot.both<0.95) {
+        below<-below+1
+        if((above>0)|(below==4)) {
+          above<--1
+        }
+      }
+      if(sign(above*below)==-1) {
+        above<-0
+        below<-0
+        break
+      }
     }
-    cv.results<-cv.results[-1,]
-    optimum<-cv.results[which.min((cv.results$coverage-(1-alpha))^2)[1],]
-    res<-jqm.est.fixed(db=db,alpha=alpha,lambda.u=optimum$lambda.u,lambda.z=optimum$lambda.z)
-    gc(verbose = FALSE)
+  }
+  cv.results<-cv.results[-1,]
+  optimum<-cv.results[which.min((cv.results$coverage-(1-alpha))^2)[1],]
+  res<-jqm.est.fixed(db=db,alpha=alpha,lambda.u=optimum$lambda.u,lambda.z=optimum$lambda.z)
+  ec<-numeric(N)
+  cnt<-1
+  for(s in subjects) {
+    y<-df$y[(df$subject==s)]
+    ec[cnt]<-mean((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
+              (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))
+    cnt<-cnt+1
+  }
+  ec<-mean(ec)
   
-   plot(cv.results$lambda.u,cv.results$coverage)
-   plot(cv.results$lambda.z,cv.results$coverage)
-   interaction.plot(response=cv.results$coverage,
-                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-   abline(h=0.95,col=2,lty=2)
-   interaction.plot(response=cv.results$cov.time,
-                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-   abline(h=0.95,col=2,lty=2)
-   interaction.plot(response=cv.results$cov.subj,
-                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-   abline(h=0.95,col=2,lty=2)
-
-
+  gc(verbose = FALSE)
+  
+  plot(cv.results$lambda.u,cv.results$coverage)
+  plot(cv.results$lambda.z,cv.results$coverage)
+  interaction.plot(response=cv.results$coverage,
+                   x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
+  abline(h=0.95,col=2,lty=2)
+  interaction.plot(response=cv.results$cov.time,
+                   x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
+  abline(h=0.95,col=2,lty=2)
+  interaction.plot(response=cv.results$cov.subj,
+                   x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
+  abline(h=0.95,col=2,lty=2)
+  
+  
   return(list(beta0=res$beta0,
               beta1=res$beta1,
               beta2=res$beta2,
@@ -508,54 +429,7 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
               lambda.z=optimum$lambda.z,
               cov.subj=optimum$cov.subj,
               cov.time=optimum$cov.time,
-              cov.tot=optimum$coverage))
+              cov.tot=optimum$coverage,
+              cov=ec))
 }
 
-#function for running the simulation
-SimStudy<-function(N, n, beta, a, b, psiu2, alpha, NSim, seed) {
-  Results<-matrix(nrow=NSim,ncol=14)
-  Results<-as.data.frame(Results)
-  names(Results)<-c("iter","alpha","beta0","beta1","beta2",
-                    "lambda.u","lambda.z",
-                    "Cov.subj","Cov.time","Cov",
-                    "EmpCov.subj","EmpCov.time","EmpCov", "seed")
-
-  for(si in 1:NSim) {
-    #modify SimData function according to the target scenario
-    df<-SimData(N=N+1,n=n+1,beta=beta,a=a,b=b,psiu2=psiu2,
-              alpha=alpha)
-    df.fit<-df[(df$time<=n)&(df$subject<=N),]
-    
-    res<-jqm(db=df.fit,
-           alpha=alpha,
-           lambda.u.seq = seq(0.5,4,0.5),
-           lambda.z.seq = seq(0.5,5,0.5))
-  
-    Results[si,1:10]<-c(si,alpha,res$beta0,res$beta1,res$beta2,
-                         res$lambda.u,res$lambda.z,
-                         res$cov.subj,res$cov.time,res$cov.tot)
-  
-    #calculate the empirical coverage for a new subject and a new measurement
-    coverage<-numeric(N)
-    for(s in 1:N) {
-      y<-df$y[(df$subject==s)&(df$time==(n+1))]
-      coverage[s]<-((y>res$beta0+res$u[s]+res$z[s]*res$beta1)&
-                        (y<res$beta0+res$u[s]+res$z[s]*res$beta2))
-    }
-    coverage<-mean(coverage)
-    
-    y.i<-df$y[df$subject==N+1]
-    coverage2<-jqm.coverage.new.subject(res=res,y=y.i,alpha=alpha)
-    
-    Results[si,11:13]<-c(coverage2,coverage,mean(c(coverage,coverage2)))
-    Results[si,14]<-seed
-      
-    #save results for every 10 iterations
-    if((si%%10) ==0) {
-     save(Results, file=paste("./output/PJQM/Normal PJQM/JQMTmp_", si, "_alpha_",alpha, "_N_",N, "_n_", n, "_beta_", 
-                               beta, "_a_", a, "_b_", b, "_Psiu2_", psiu2, 
-                               ".Rdata",sep = ""))
-    }
-   gc(verbose = FALSE)
-  }
-}
