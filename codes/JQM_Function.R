@@ -1,4 +1,5 @@
 library(quantreg)
+library(invgamma)
 
 #checker function
 check<-function(u,tau) {
@@ -138,7 +139,7 @@ jqm.est.fixed<-function(db,lambda.u,lambda.z,alpha) {
               cnt=cnt))
 }
 
-jqm.coverage.new.subject<-function(res,y,y.s,alpha) {
+jqm.coverage.new.subject<-function(res,y,y.s,alpha,side="both") {
   l.u<-res$lambda.u
   l.z<-res$lambda.z
   tau1 = alpha/2
@@ -188,14 +189,21 @@ jqm.coverage.new.subject<-function(res,y,y.s,alpha) {
   })
   z.i<-z.seq[which.min(obj)[1]]
   
-  coverage2<-mean((y.s>res$beta0+u.i+z.i*res$beta1)&
-                    (y.s<res$beta0+u.i+z.i*res$beta2))
+  if(side=="both"){
+    coverage2<-mean((y.s>res$beta0+u.i+z.i*res$beta1)&
+                      (y.s<res$beta0+u.i+z.i*res$beta2))    
+  }
+  if(side=="up"){
+    coverage2<-mean(y.s<res$beta0+u.i+z.i*res$beta2)
+  }
+  if(side=="low"){
+    coverage2<-mean(y.s>res$beta0+u.i+z.i*res$beta1)
+  }
   
   return(coverage2)
 }
 
-#compute coverage for IRI with only upper bound
-jqm.coverage.new.subject.up<-function(res,y,l.u,l.z,alpha) {
+jqm.coverage.new.subject1obs<-function(res,y,y.s,alpha,side="both") {
   l.u<-res$lambda.u
   l.z<-res$lambda.z
   tau1 = alpha/2
@@ -203,7 +211,7 @@ jqm.coverage.new.subject.up<-function(res,y,l.u,l.z,alpha) {
   
   
   y.i<-y-res$beta0
-  w<-seq(min(y.i),max(y.i), length.out = 100)
+  w<-seq((min(y.i)-l.u-l.z),(max(y.i)+l.u+l.z), length.out = 100)
   obj<-sapply(w,function(x) {
     sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
   })
@@ -222,7 +230,7 @@ jqm.coverage.new.subject.up<-function(res,y,l.u,l.z,alpha) {
   z.i<-z.seq[which.min(obj)[1]]
   
   y.i<-y-res$beta0
-  w<-seq(min(y.i),max(y.i), length.out = 100)
+  w<-seq((min(y.i)-l.u-l.z),(max(y.i)+l.u+l.z), length.out = 100)
   obj<-sapply(w,function(x) {
     sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
   })
@@ -245,63 +253,16 @@ jqm.coverage.new.subject.up<-function(res,y,l.u,l.z,alpha) {
   })
   z.i<-z.seq[which.min(obj)[1]]
   
-  coverage2<-mean(y.i<z.i*res$beta2)
-  
-  return(coverage2)
-}
-
-#compute coverage for IRI with only lower bound
-jqm.coverage.new.subject.low<-function(res,y,l.u,l.z,alpha) {
-  l.u<-res$lambda.u
-  l.z<-res$lambda.z
-  tau1 = alpha/2
-  tau2 = 1-tau1
-  
-  
-  y.i<-y-res$beta0
-  w<-seq(min(y.i),max(y.i), length.out = 100)
-  obj<-sapply(w,function(x) {
-    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
-  })
-  u.i<-w[which.min(obj)[1]]
-  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
-  obj<-sapply(w,function(x) {
-    sum(check(y.i-res$beta1-x,tau=tau1)+check(y.i-res$beta2-x,tau=tau2))+l.u*x^2
-  })
-  u.i<-w[which.min(obj)[1]]
-  
-  y.i<-y.i-u.i
-  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
-  obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
-  })
-  z.i<-z.seq[which.min(obj)[1]]
-  
-  y.i<-y-res$beta0
-  w<-seq(min(y.i),max(y.i), length.out = 100)
-  obj<-sapply(w,function(x) {
-    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
-  })
-  u.i<-w[which.min(obj)[1]]
-  w<-runif(20,min=u.i-(w[2]-w[1]), max=u.i+(w[2]-w[1]))
-  obj<-sapply(w,function(x) {
-    sum(check(y.i-z.i*res$beta1-x,tau=tau1)+check(y.i-z.i*res$beta2-x,tau=tau2))+l.u*x^2
-  })
-  u.i<-w[which.min(obj)[1]]
-  
-  y.i<-y.i-u.i
-  z.seq<-seq(0.9*min(res$z),1.1*max(res$z), length.out=100)
-  obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
-  })
-  z.i<-z.seq[which.min(obj)[1]]
-  z.seq<-runif(20,min=z.i-(z.seq[2]-z.seq[1]), max=z.i+(z.seq[2]-z.seq[1]))
-  obj<-sapply(z.seq,function(x) {
-    sum(check(y.i-x*res$beta1,tau=tau1)+check(y.i-x*res$beta2,tau=tau2))+l.z*(x-1)^2
-  })
-  z.i<-z.seq[which.min(obj)[1]]
-  
-  coverage2<-mean((y.i>z.i*res$beta1))
+  if(side=="both"){
+    coverage2<-mean((y.s>res$beta0+u.i+z.i*res$beta1)&
+                      (y.s<res$beta0+u.i+z.i*res$beta2))    
+  }
+  if(side=="up"){
+    coverage2<-mean(y.s<res$beta0+u.i+z.i*res$beta2)
+  }
+  if(side=="low"){
+    coverage2<-mean(y.s>res$beta0+u.i+z.i*res$beta1)
+  }
   
   return(coverage2)
 }
@@ -309,7 +270,7 @@ jqm.coverage.new.subject.low<-function(res,y,l.u,l.z,alpha) {
 #function for running the joint-IRI estimation, it includes calling the jqm.update, 
 #jqm.est.fixed, and jqm.coverage.new.subject functions
 jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
-              lambda.z.seq=seq(0.5,5,0.5)) {
+              lambda.z.seq=seq(0.5,5,0.5),side="both") {
   beta0<-median(db$y)
   subjects<-unique(db$subject)
   N<-length(subjects)
@@ -341,20 +302,44 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
         db.y<-db[(db$subject==s),]
         y<-db.y$y[(db.y$time==max(db.y$time))]
         
-        coverage[cnt]<-((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
-                          (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))
+        if(side=="both"){
+          coverage[cnt]<-((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
+                            (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))    
+        }
+        if(side=="up"){
+          coverage[cnt]<-(y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2)
+        }
+        if(side=="low"){
+          coverage[cnt]<-(y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)
+        }
+        
         cnt<-cnt+1
       }
       coverage<-mean(coverage)
       
-      #coverage for the new subject, using LOOCV
+      # # #estimate the parameters again, without the last subject
+      # db.del2<-db[db$subject!=max(db$subject),]
+      # N.del<-length(unique(db.del2$subject))
+      # max.time<-ifelse(length(db.del2[db.del2$time==max(db.del2$time),]$subject)==N.del, 
+      #                  yes=max(db.del2$time), no=(max(db.del2$time)-1))
+      # db.del2<-db.del2[db.del2$time!=max.time,]
+      # 
+      # res2<-jqm.est.fixed(db=db.del2,lambda.u=l.u,lambda.z=l.z, alpha=alpha)
+      # # coverage for a new subject minus the last time point
+      # db.y<-db[db$subject==s,]
+      # y.i<-db.y$y[db.y$time!=max(db.y$time)]
+      # y.s<-db.y$y[db.y$time==max(db.y$time)]
+      # 
+      # coverage2<-jqm.coverage.new.subject(res=res2,y=y.i,y.s=y.s,alpha=alpha)
+      # 
+      # coverage for the new subject, using LOOCV
       coverage.tot<-c(0,0)
       coverage2<-numeric(N)
       cnt<-1
       for(s in subjects) {
         db.del2<-db[db$subject!=s,]
         N.del<-length(unique(db.del2$subject))
-        max.time<-ifelse(length(db.del2[db.del2$time==max(db.del2$time),]$subject)==N.del, 
+        max.time<-ifelse(length(db.del2[db.del2$time==max(db.del2$time),]$subject)==N.del,
                          yes=max(db.del2$time), no=(max(db.del2$time)-1))
         db.del2<-db.del2[db.del2$time!=max.time,]
         
@@ -364,7 +349,7 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
         y.i<-db.y$y[db.y$time!=max(db.y$time)]
         y.s<-db.y$y[db.y$time==max(db.y$time)]
         
-        coverage2[cnt]<-jqm.coverage.new.subject(res=res2,y=y.i,y.s=y.s,alpha=alpha)
+        coverage2[cnt]<-jqm.coverage.new.subject(res=res2,y=y.i,y.s=y.s,alpha=alpha,side=side)
         cnt<-cnt+1
       }
       coverage2<-mean(coverage2)
@@ -393,31 +378,25 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
     }
   }
   cv.results<-cv.results[-1,]
-  optimum<-cv.results[which.min((cv.results$coverage-(1-alpha))^2)[1],]
-  res<-jqm.est.fixed(db=db,alpha=alpha,lambda.u=optimum$lambda.u,lambda.z=optimum$lambda.z)
-  ec<-numeric(N)
-  cnt<-1
-  for(s in subjects) {
-    y<-df$y[(df$subject==s)]
-    ec[cnt]<-mean((y>res$beta0+res$u[cnt]+res$z[cnt]*res$beta1)&
-              (y<res$beta0+res$u[cnt]+res$z[cnt]*res$beta2))
-    cnt<-cnt+1
+  for (i in 1:nrow(cv.results)) {
+    cv.results$min[i]<-min(cv.results$cov.time[i],cv.results$cov.subj[i])
   }
-  ec<-mean(ec)
-  
+  optimum<-cv.results[which.min((cv.results$min-(1-alpha))^2)[1],]
+  #    optimum<-cv.results[which.min((cv.results$coverage-(1-alpha))^2)[1],]
+  res<-jqm.est.fixed(db=db,alpha=alpha,lambda.u=optimum$lambda.u,lambda.z=optimum$lambda.z)
   gc(verbose = FALSE)
   
   plot(cv.results$lambda.u,cv.results$coverage)
   plot(cv.results$lambda.z,cv.results$coverage)
   interaction.plot(response=cv.results$coverage,
                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-  abline(h=0.95,col=2,lty=2)
+  abline(h=1-alpha,col=2,lty=2)
   interaction.plot(response=cv.results$cov.time,
                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-  abline(h=0.95,col=2,lty=2)
+  abline(h=1-alpha,col=2,lty=2)
   interaction.plot(response=cv.results$cov.subj,
                    x.factor=cv.results$lambda.z,trace.factor = cv.results$lambda.u)
-  abline(h=0.95,col=2,lty=2)
+  abline(h=1-alpha,col=2,lty=2)
   
   
   return(list(beta0=res$beta0,
@@ -429,7 +408,5 @@ jqm<-function(db, alpha=0.05,lambda.u.seq=seq(0.5,4,0.5),
               lambda.z=optimum$lambda.z,
               cov.subj=optimum$cov.subj,
               cov.time=optimum$cov.time,
-              cov.tot=optimum$coverage,
-              cov=ec))
+              cov.tot=optimum$coverage))
 }
-
