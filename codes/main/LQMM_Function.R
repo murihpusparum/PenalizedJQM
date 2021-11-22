@@ -96,8 +96,7 @@ lqmm.fun<-function(alpha, N, n, beta, a, b, seed, si, FUN){
   
   cnt<-1
   for(s in subjects) {
-    y<-d$df$y[(d$df$subject==s)]
-    
+    y<-d$df$y[(d$df$subject==s)&(d$df$time==(n+1))]
     coverage[cnt]<-mean((y>fit$beta01+fit$u.i1[cnt])&
                           (y<fit$beta02+fit$u.i2[cnt]))
     cnt<-cnt+1
@@ -118,10 +117,9 @@ lqmm.fun<-function(alpha, N, n, beta, a, b, seed, si, FUN){
     coverage<-numeric(N)
     cnt<-1
     for(s in subjects) {
-      y<-d$df$y[(d$df$subject==s)]
-      
-      coverage[cnt]<-mean((y>fit$beta01+fit$u.i1[s])&
-                            (y<fit$beta02+fit$u.i2[s]))
+      y<-d$df$y[(d$df$subject==s)&(d$df$time==(n+1))]
+      coverage[cnt]<-mean((y>fit$beta01+fit$u.i1[cnt])&
+                            (y<fit$beta02+fit$u.i2[cnt]))
       cnt<-cnt+1
     }
     coverage<-mean(coverage)
