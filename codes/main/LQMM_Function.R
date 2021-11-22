@@ -86,11 +86,23 @@ lqmm.fun<-function(alpha, N, n, beta, a, b, seed, si, FUN){
   
   set.seed(seed)
   d<-FUN(N=N+1, n=n+1, alpha=alpha, beta=beta, a=a, b=b)
+  subjects<-unique(d$df$subject)
   df.fit<-d$df[(d$df$time<=n),]
   fit<-lqmm.fit(df.fit,alpha = alpha)
   
   warn1<-catch.warn.lqmm(theta=fit$theta_z1, cov_name=fit$cov_name1)
   warn2<-catch.warn.lqmm(theta=fit$theta_z2, cov_name=fit$cov_name2)
+  coverage<-numeric(N)
+  
+  cnt<-1
+  for(s in subjects) {
+    y<-d$df$y[(d$df$subject==s)]
+    
+    coverage[cnt]<-mean((y>fit$beta01+fit$u.i1[cnt])&
+                          (y<fit$beta02+fit$u.i2[cnt]))
+    cnt<-cnt+1
+  }
+  coverage<-mean(coverage)
   
   j<-1
   while (warn1==TRUE | warn2==TRUE) {
@@ -103,12 +115,23 @@ lqmm.fun<-function(alpha, N, n, beta, a, b, seed, si, FUN){
     warn1<-catch.warn.lqmm(theta=fit$theta_z1, cov_name=fit$cov_name1)
     warn2<-catch.warn.lqmm(theta=fit$theta_z2, cov_name=fit$cov_name2)
     
+    coverage<-numeric(N)
+    cnt<-1
+    for(s in subjects) {
+      y<-d$df$y[(d$df$subject==s)]
+      
+      coverage[cnt]<-mean((y>fit$beta01+fit$u.i1[s])&
+                            (y<fit$beta02+fit$u.i2[s]))
+      cnt<-cnt+1
+    }
+    coverage<-mean(coverage)
+    
     j<-j+1
   }
   
   return(list(beta01=fit$beta01,
               beta02=fit$beta02,
               u1=fit$u.i1, u2=fit$u.i2,
-              df=d$df, seed=seed,
+              df=d$df, cov=coverage, seed=seed,
               sd=d$sd))
 }
