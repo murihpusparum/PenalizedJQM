@@ -1,12 +1,12 @@
-source("./codes/simdata.R")
-source("./codes/LQMM_Function.R")
-source("./codes/JQM_Function.R")
+source("./codes/simulation/simdata_sd.R")
+source("./codes/main/LQMM_Function.R")
+source("./codes/main/JQM_Function.R")
 library(ggplot2)
 
 # data generation
 # data must not result into warning in LQMM method
 seed<-4581621 # random seed
-res.lqmm<-lqmm.fun(alpha=0.05, N=30, n=10, beta=0, a=2, b=0.4, seed=seed, FUN=SimData_NvarN) 
+res.lqmm<-lqmm.fun(alpha=0.05, N=30, n=10, beta=0, a=2, b=0.4, seed=seed,si=1, FUN=SimData_NvarN) 
 
 # data overview
 df<-res.lqmm$df
@@ -24,7 +24,7 @@ res<-jqm(db=df,
 
 iri.jqm<-cbind.data.frame(res$beta0+res$u+res$z*res$beta1, 
                           res$beta0+res$u+res$z*res$beta2, 
-                          seq(1:30))
+                          seq(1:length(unique(df$subject))))
 colnames(iri.jqm)<-c("low","up","id")
 
 jqm.plot <- ggplot(iri.jqm) +
@@ -39,14 +39,14 @@ jqm.plot <- ggplot(iri.jqm) +
 jqm.plot
 
 # empirical coverage
-res$cov
+res$cov.tot
 
 ####################################
 # to get the IRIs from LQMM
 ####################################
 iri.lqmm<-cbind.data.frame(res.lqmm$beta01+res.lqmm$u1, 
                            res.lqmm$beta02+res.lqmm$u2, 
-                          seq(1:30))
+                          seq(1:length(unique(df$subject))))
 colnames(iri.lqmm)<-c("low","up","id")
 
 lqmm.plot <- ggplot(iri.lqmm) +
