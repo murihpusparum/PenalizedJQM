@@ -1,4 +1,6 @@
-#function for running the simulation
+source("./codes/main/JQM_Function.R")
+source("./codes/simulation/simdata_sd.R")
+
 SimStudy<-function(nr, N, n, beta, a, b, alpha, NSim, seed, FUN) {
   Results<-matrix(nrow=NSim,ncol=18)
   Results<-as.data.frame(Results)
@@ -9,7 +11,7 @@ SimStudy<-function(nr, N, n, beta, a, b, alpha, NSim, seed, FUN) {
                     "sd","avg","median")
   
   #generate seed of data without LQMM warning
-  source("generate_data_sd.R")
+  source("./codes/simulation/generate_data_sd.R")
   seed.new<-d(alpha, N, n, beta, a, b, seed, NSim, FUN)
   
   for(si in 1:NSim) {
