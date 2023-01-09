@@ -1,1 +1,1 @@
-## this repo has been moved to https://github.com/irislab19/penalisedJQM
+## this repo has been moved to https://github.com/iris-statlab/penalisedJQM
